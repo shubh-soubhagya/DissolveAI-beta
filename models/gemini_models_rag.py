@@ -6,10 +6,7 @@ import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
 import faiss
 
-# =====================================================
 # CONFIGURATION
-# =====================================================
-
 MODEL_NAME = "gemini-2.5-flash-lite"
 FILES_CSV = r"data/repo_files_data.csv"
 ISSUES_CSV = r"data/repo_issues.csv"
@@ -23,9 +20,7 @@ INDEX_PATH = r"embeddings/repo_index.pkl"
 TOP_K = 30  # Number of most relevant files to retrieve per issue
 # ROW_INDEX = 3  # No longer needed, will be dynamic
 
-# =====================================================
 # LOAD ENVIRONMENT VARIABLES
-# =====================================================
 def load_env_and_configure():
     """Loads .env file and configures the GenAI API key."""
     load_dotenv()
@@ -41,9 +36,7 @@ def load_env_and_configure():
     return GOOGLE_API_KEY
 
 
-# =====================================================
 # BUILD VECTOR INDEX (RUN ONCE PER REPO)
-# =====================================================
 def build_vector_index():
     """Builds and saves a FAISS vector index from the repo files CSV."""
     print("🧠 Building vector index from repo files...")
@@ -76,9 +69,7 @@ def build_vector_index():
     print(f"✅ Vector index saved at: {INDEX_PATH}")
 
 
-# =====================================================
 # LOAD INDEX & RETRIEVE RELEVANT FILES
-# =====================================================
 def retrieve_relevant_files(query: str, top_k: int = TOP_K):
     """Retrieves context from the vector index based on a query."""
     if not os.path.exists(INDEX_PATH):
@@ -104,9 +95,7 @@ def retrieve_relevant_files(query: str, top_k: int = TOP_K):
     return repo_context
 
 
-# =====================================================
 # CREATE PROMPT FOR GEMINI
-# =====================================================
 def create_prompt(issue: dict, repo_context: str) -> str:
     """Creates the initial system-level prompt for the AI."""
     issue_title = issue.get("title", "Untitled Issue")
@@ -130,9 +119,7 @@ Your task:
 """
 
 
-# =====================================================
 # LOAD ISSUE
-# =====================================================
 def load_issue(issue_csv: str, row_index: int = 0):
     """Loads a specific issue by its row index in the CSV."""
     df = pd.read_csv(issue_csv)
@@ -141,7 +128,5 @@ def load_issue(issue_csv: str, row_index: int = 0):
         raise IndexError(f"Row index {row_index} out of bounds for issues CSV.")
     return df.to_dict(orient="records")[row_index]
 
-#
-# ℹ️ NOTE: The CLI-specific 'start_chat' and '__main__' block
+# NOTE: The CLI-specific 'start_chat' and '__main__' block
 # have been removed. FastAPI in `main.py` will now handle this.
-#
