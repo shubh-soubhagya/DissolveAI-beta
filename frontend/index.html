@@ -12,17 +12,17 @@
         </svg>">
 
     <style>
-        #chat-log::-webkit-scrollbar {
+        #chat-log::-webkit-scrollbar, #summary-content::-webkit-scrollbar {
             width: 8px;
         }
-        #chat-log::-webkit-scrollbar-track {
+        #chat-log::-webkit-scrollbar-track, #summary-content::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
-        #chat-log::-webkit-scrollbar-thumb {
+        #chat-log::-webkit-scrollbar-thumb, #summary-content::-webkit-scrollbar-thumb {
             background: #94a3b8;
             border-radius: 4px;
         }
-        #chat-log::-webkit-scrollbar-thumb:hover {
+        #chat-log::-webkit-scrollbar-thumb:hover, #summary-content::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
         
@@ -92,6 +92,41 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: #e5e7eb;
+            color: #374151;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab-button.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .tab-button:hover {
+            background: #d1d5db;
+        }
+        .tab-button.active:hover {
+            background: #2563eb;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        #summary-content {
+            line-height: 1.6;
+            color: #374151;
+        }
+        #summary-content p {
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 font-sans antialiased">
@@ -122,7 +157,6 @@
                 <div class="bg-white p-6 rounded-lg shadow-md border-2 border-purple-200">
                     <h2 class="text-lg font-semibold mb-4 text-gray-700">🎯 Select AI Model</h2>
                     <div id="model-selection" class="space-y-3">
-                        <!-- Models will be loaded dynamically -->
                         <div class="model-option p-4 border-2 border-gray-300 rounded-lg hover:border-blue-400 transition" data-model="gemini">
                             <h3 class="font-semibold text-gray-800">Google Gemini</h3>
                             <p class="text-sm text-gray-600">Fast and reliable</p>
@@ -159,9 +193,27 @@
 
             </div>
 
-            <!-- Right Column: Chat -->
+            <!-- Right Column: Tabs for Summary & Chat -->
             <div class="lg:col-span-2 bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
-                <div class="p-6 flex flex-col h-full">
+                
+                <!-- Tab Buttons -->
+                <div class="flex border-b">
+                    <button class="tab-button active" data-tab="summary">📖 Repository Summary</button>
+                    <button class="tab-button" data-tab="chat">💬 AI Assistant</button>
+                </div>
+
+                <!-- Summary Tab -->
+                <div id="summary-tab" class="tab-content active flex flex-col h-full p-6">
+                    <div id="summary-placeholder" class="flex h-full items-center justify-center">
+                        <p class="text-gray-500 text-center">Fetch a repository to see its summary</p>
+                    </div>
+                    <div id="summary-content" class="hidden flex-grow overflow-y-auto bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                        <!-- Summary text will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Chat Tab -->
+                <div id="chat-tab" class="tab-content flex flex-col h-full p-6">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">💬 AI Assistant</h2>
                     
                     <!-- Chat Log -->
@@ -187,6 +239,7 @@
                         </div>
                     </form>
                 </div>
+
             </div>
 
         </div>
@@ -211,34 +264,48 @@
             const chatSendButton = document.getElementById('chat-send-button');
             const chatLoader = document.getElementById('chat-loader');
             const loaderText = document.getElementById('loader-text');
+            const summaryContent = document.getElementById('summary-content');
+            const summaryPlaceholder = document.getElementById('summary-placeholder');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
 
             // State
             let selectedModel = null;
             let selectedIssueId = null;
 
             // ============================================
+            // TAB SWITCHING
+            // ============================================
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabName = button.dataset.tab;
+                    
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    button.classList.add('active');
+                    document.getElementById(`${tabName}-tab`).classList.add('active');
+                });
+            });
+
+            // ============================================
             // INITIALIZE MODEL SELECTION
             // ============================================
             function initializeModelSelection() {
-                // Add click handlers to model options
                 document.querySelectorAll('.model-option').forEach(el => {
                     el.addEventListener('click', () => selectModel(el.dataset.model));
                 });
-                
-                // Set default to first model
                 selectModel('gemini');
             }
 
             function selectModel(model) {
                 selectedModel = model;
                 
-                // Update UI
                 document.querySelectorAll('.model-option').forEach(el => {
                     el.classList.remove('selected');
                 });
                 document.querySelector(`[data-model="${model}"]`).classList.add('selected');
                 
-                // Update display
                 const displayName = model.charAt(0).toUpperCase() + model.slice(1);
                 modelDisplay.textContent = displayName;
                 
@@ -263,6 +330,7 @@
                 setLoadingState(true);
                 clearIssues();
                 clearChat();
+                clearSummary();
                 disableChat();
 
                 try {
@@ -282,9 +350,15 @@
 
                     const data = await response.json();
                     
+                    // Display summary
+                    if (data.summary) {
+                        displaySummary(data.summary);
+                        errorMessage.textContent = `✅ Repository processed`;
+                    }
+                    
                     if (data.issues && data.issues.length > 0) {
                         displayIssues(data.issues);
-                        errorMessage.textContent = `✅ Found ${data.issues.length} issues`;
+                        errorMessage.textContent += ` | Found ${data.issues.length} issues`;
                     } else {
                         showIssuesPlaceholder('No issues found');
                     }
@@ -369,12 +443,33 @@
                 issuesListContainer.innerHTML = '';
             }
 
+            function clearChat() {
+                chatLog.innerHTML = '';
+            }
+
+            function clearSummary() {
+                summaryContent.classList.add('hidden');
+                summaryPlaceholder.classList.remove('hidden');
+                summaryContent.innerHTML = '';
+            }
+
             function showIssuesPlaceholder(text) {
                 clearIssues();
                 const p = document.createElement('p');
                 p.textContent = text;
                 p.className = 'text-gray-500 text-center pt-4';
                 issuesListContainer.appendChild(p);
+            }
+
+            function displaySummary(summary) {
+                summaryPlaceholder.classList.add('hidden');
+                summaryContent.classList.remove('hidden');
+                summaryContent.innerHTML = marked.parse(summary);
+                
+                // Style the summary paragraphs
+                summaryContent.querySelectorAll('p').forEach(p => {
+                    p.className = 'mb-3 leading-relaxed';
+                });
             }
 
             function displayIssues(issues) {
@@ -403,10 +498,6 @@
                 enableChat();
                 clearChat();
                 addChatMessage('system', `Issue #${issue.id}: ${escapeHTML(issue.title)}`);
-            }
-
-            function clearChat() {
-                chatLog.innerHTML = '';
             }
 
             function enableChat() {
@@ -453,14 +544,6 @@
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'ai-message-content';
                     contentDiv.innerHTML = marked.parse(text);
-                    
-                    contentDiv.querySelectorAll('pre').forEach(pre => {
-                        pre.className = 'bg-gray-800 text-white p-3 rounded-md overflow-x-auto text-sm my-2';
-                    });
-                    contentDiv.querySelectorAll('ul, ol').forEach(list => {
-                        list.className = 'ml-4 my-2';
-                    });
-                    
                     messageEl.appendChild(contentDiv);
                 } else {
                     messageEl.textContent = text;

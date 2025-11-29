@@ -15,6 +15,7 @@ import time
 from clone import clone_repo
 from file_contents import extract_files_to_csv
 from issues import extract_issues
+from repo_summarizer import summarize_repository
 from models.gemini_models_rag import (
     load_env_and_configure as load_gemini_env,
     build_vector_index,
@@ -61,21 +62,19 @@ chat_sessions = {}
 class RepoRequest(BaseModel):
     """Request model for processing a new repository."""
     url: str
-    model: str = "gemini"  # NEW: model choice
+    model: str = "gemini"
 
 
 class AiRequest(BaseModel):
     """Request model for asking the AI a question."""
     issue_id: int
     prompt: str
-    model: str = "gemini"  # NEW: model choice
+    model: str = "gemini"
 
 
 # --- Cleanup Helper (ROBUST VERSION) ---
 def remove_readonly(func, path, exc):
-    """
-    Error handler for shutil.rmtree to handle readonly files on Windows.
-    """
+    """Error handler for shutil.rmtree to handle readonly files on Windows."""
     import stat
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
@@ -85,9 +84,7 @@ def remove_readonly(func, path, exc):
 
 
 def cleanup_temp_data():
-    """
-    Removes temporary data files with retry logic for Windows lock issues.
-    """
+    """Removes temporary data files with retry logic for Windows lock issues."""
     max_retries = 3
     retry_count = 0
 
@@ -112,16 +109,13 @@ def cleanup_temp_data():
                 time.sleep(1)
             else:
                 print(f"❌ Cleanup failed after {max_retries} attempts: {e}")
-                # Don't raise exception, allow process to continue
                 if not os.path.exists(TEMP_DATA_DIR):
                     os.makedirs(TEMP_DATA_DIR, exist_ok=True)
                 return
 
 
 def load_issue_by_id(csv_path: str, issue_id: int) -> dict | None:
-    """Loads a specific issue from the CSV using its GitHub issue number (id).
-    Ensures textual fields are strings (no NaN floats).
-    """
+    """Loads a specific issue from the CSV using its GitHub issue number (id)."""
     if not os.path.exists(csv_path):
         return None
 
@@ -130,10 +124,8 @@ def load_issue_by_id(csv_path: str, issue_id: int) -> dict | None:
     if 'number' not in df.columns:
         return None
 
-    # Replace NaN with empty strings and coerce types for safety
     df = df.fillna("")
 
-    # ensure 'number' column is comparable to issue_id
     try:
         df['number'] = pd.to_numeric(df['number'], errors='coerce')
     except Exception:
@@ -146,7 +138,6 @@ def load_issue_by_id(csv_path: str, issue_id: int) -> dict | None:
 
     record = issue_df.to_dict(orient="records")[0]
 
-    # Make sure textual fields are strings
     for k, v in record.items():
         if v is None:
             record[k] = ""
@@ -161,10 +152,9 @@ def load_issue_by_id(csv_path: str, issue_id: int) -> dict | None:
 # --- API Endpoint 1: Process Repository ---
 @app.post("/process-repo")
 async def process_repo(request: RepoRequest):
-    """Clones a repo, extracts files/issues, builds the vector index."""
+    """Clones a repo, extracts files/issues, builds the vector index, and generates summary."""
     print(f"🚀 Processing repo with {request.model} model: {request.url}")
 
-    # Validate model choice
     if request.model not in ["gemini", "groq"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -195,29 +185,31 @@ async def process_repo(request: RepoRequest):
         try:
             build_vector_index()
         except Exception as e_index:
-            # Log and continue — index build failure shouldn't return NaN errors
             print(f"⚠️ Warning: failed to build vector index: {e_index}")
+
+        # NEW: Generate repository summary
+        print("📖 Generating repository summary...")
+        summary = ""
+        try:
+            summary = summarize_repository(model=request.model)
+        except Exception as e_summary:
+            print(f"⚠️ Warning: failed to generate summary: {e_summary}")
+            summary = "Summary generation failed. Please check API keys."
 
         print("✅ Processing complete.")
         if not os.path.exists(ISSUES_CSV):
             raise FileNotFoundError(f"Issues CSV not created at {ISSUES_CSV}")
 
-        # Read issues and sanitize (remove NaN, convert to plain python types)
         df_issues = pd.read_csv(ISSUES_CSV)
 
         if 'number' not in df_issues.columns:
             raise KeyError("Issues CSV must contain a 'number' column.")
 
-        # Replace NaN with empty strings for all columns (prevents float NaN)
         df_issues = df_issues.fillna("")
-
-        # Ensure id column exists and is JSON-safe
         df_issues['id'] = df_issues['number']
 
-        # Select only the fields we want to return and ensure plain python types
         issues_df_subset = df_issues[['id', 'title', 'body']].copy()
 
-        # Convert any non-primitive values to strings (defensive)
         for col in ['id', 'title', 'body']:
             issues_df_subset[col] = issues_df_subset[col].apply(
                 lambda v: "" if v is None else (str(v) if not isinstance(v, (str, int, bool, list, dict)) else v)
@@ -225,28 +217,28 @@ async def process_repo(request: RepoRequest):
 
         issues_list = issues_df_subset.to_dict(orient="records")
 
-        # Make sure everything is JSON-serializable (handle numpy / pandas dtypes)
-        safe_payload = jsonable_encoder({"issues": issues_list, "model": request.model})
+        safe_payload = jsonable_encoder({
+            "issues": issues_list,
+            "summary": summary,
+            "model": request.model
+        })
 
         return JSONResponse(content=safe_payload)
 
     except Exception as e:
         print(f"❌ Error during repo processing: {e}")
-        # Log stacktrace if you want more detail (optional)
-        # import traceback; traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred: {str(e)}"
         )
 
 
-# --- API Endpoint 2: Chat with AI (Gemini & Groq) ---
+# --- API Endpoint 2: Chat with AI ---
 @app.post("/ask-ai")
 async def ask_ai(request: AiRequest):
     """Handles chat using selected model (Gemini or Groq)."""
     print(f"🤖 Chat request (model: {request.model}) for issue {request.issue_id}")
 
-    # Validate model choice
     if request.model not in ["gemini", "groq"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -256,7 +248,6 @@ async def ask_ai(request: AiRequest):
     try:
         session_key = f"{request.issue_id}_{request.model}"
 
-        # NEW CHAT SESSION LOGIC
         if session_key not in chat_sessions:
             print(f"Creating new chat session for issue {request.issue_id} ({request.model})...")
 
@@ -268,34 +259,16 @@ async def ask_ai(request: AiRequest):
             repo_context = retrieve_relevant_files(issue.get("body", ""))
             system_prompt = create_prompt(issue, repo_context)
 
-            if request.model == "gemini":
-                chat = gemini_model.start_chat(
-                    history=[{"role": "user", "parts": system_prompt}]
-                )
-            else:  # groq
-                chat = {
-                    "messages": [{"role": "user", "content": system_prompt}],
-                    "model": GROQ_MODEL_NAME
-                }
-
+            chat = gemini_model.start_chat(
+                history=[{"role": "user", "parts": system_prompt}]
+            )
             chat_sessions[session_key] = chat
 
         chat = chat_sessions[session_key]
 
         print(f"Sending prompt to {request.model}...")
-
-        if request.model == "gemini":
-            response = chat.send_message(request.prompt)
-            response_text = response.text
-        else:  # groq
-            chat["messages"].append({"role": "user", "content": request.prompt})
-            response = groq_client.chat.completions.create(
-                model=chat["model"],
-                messages=chat["messages"],
-                temperature=0.7
-            )
-            response_text = response.choices[0].message.content
-            chat["messages"].append({"role": "assistant", "content": response_text})
+        response = chat.send_message(request.prompt)
+        response_text = response.text
 
         print(f"✅ Got response from {request.model}")
         return {"response": response_text}
