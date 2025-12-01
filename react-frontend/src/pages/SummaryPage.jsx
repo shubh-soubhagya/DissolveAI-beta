@@ -1,30 +1,3 @@
-// import { useContext } from "react";
-// import { AppContext } from "../context/AppContext";
-// import { marked } from "marked";
-
-// export default function SummaryPage({ onStartChat }) {
-//   const { summary } = useContext(AppContext);
-
-//   return (
-//     <div className="max-w-4xl mx-auto p-6 mt-6 bg-white rounded shadow">
-//       <h1 className="text-3xl font-semibold mb-4">Repository Summary</h1>
-
-//       <div
-//         className="prose max-w-none bg-gray-50 p-4 rounded"
-//         dangerouslySetInnerHTML={{ __html: marked(summary || "") }}
-//       />
-
-//       <button
-//         onClick={onStartChat}
-//         className="mt-6 px-6 py-3 bg-blue-600 text-white rounded"
-//       >
-//         Start Chat
-//       </button>
-//     </div>
-//   );
-// }
-
-
 import { useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { marked } from "marked";

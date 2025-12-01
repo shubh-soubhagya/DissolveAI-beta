@@ -1,72 +1,3 @@
-// import { useContext } from "react";
-// import { AppContext } from "../context/AppContext";
-// import { FiX } from "react-icons/fi";
-
-// export default function Sidebar() {
-//   const {
-//     sidebarOpen, setSidebarOpen,
-//     selectedModel, setSelectedModel,
-//     repoUrl, setRepoUrl,
-//     issues, selectedIssue, setSelectedIssue
-//   } = useContext(AppContext);
-
-//   return (
-//     <div className={`fixed top-0 left-0 h-full w-72 bg-white shadow-lg transform
-//       ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-//       transition-transform duration-300 p-4 z-50`}>
-
-//       <div className="flex justify-between items-center mb-4">
-//         <h2 className="text-lg font-semibold">Settings</h2>
-//         <button onClick={() => setSidebarOpen(false)} className="text-xl">
-//           <FiX />
-//         </button>
-//       </div>
-
-//       <div className="space-y-4">
-//         <div>
-//           <label className="font-medium">Model</label>
-//           <select
-//             className="w-full p-2 border rounded"
-//             value={selectedModel}
-//             onChange={(e) => setSelectedModel(e.target.value)}
-//           >
-//             <option value="gemini">Gemini</option>
-//             <option value="groq">Groq</option>
-//           </select>
-//         </div>
-
-//         <div>
-//           <label className="font-medium">Repository URL</label>
-//           <input
-//             value={repoUrl}
-//             onChange={(e) => setRepoUrl(e.target.value)}
-//             className="w-full p-2 border rounded"
-//           />
-//         </div>
-
-//         <div>
-//           <label className="font-medium">Issue</label>
-//           <select
-//             className="w-full p-2 border rounded"
-//             value={selectedIssue || ""}
-//             onChange={(e) => setSelectedIssue(e.target.value)}
-//           >
-//             <option value="">Select Issue</option>
-//             {issues.map(i => (
-//               <option key={i.id} value={i.id}>
-//                 {i.title}
-//               </option>
-//             ))}
-//           </select>
-//         </div>
-
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
 import { useContext, useState, useRef, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { FiX, FiCpu, FiGithub, FiAlertCircle, FiChevronDown, FiCheck } from "react-icons/fi";
@@ -145,7 +76,7 @@ export default function Sidebar() {
   // Prepare options for the custom dropdowns
   const modelOptions = [
     { value: "gemini", label: "Gemini 1.5 Pro" },
-    { value: "groq", label: "Groq (Llama 3)" }
+    { value: "groq", label: "ChatGPT-OSS" }
   ];
 
   const issueOptions = issues.map(i => ({

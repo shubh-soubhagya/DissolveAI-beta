@@ -1,104 +1,3 @@
-// import { useContext, useState } from "react";
-// import { AppContext } from "../context/AppContext";
-// import backend from "../api/api";
-
-// export default function Dialog({ onDone }) {
-//   const {
-//     selectedModel, setSelectedModel,
-//     repoUrl, setRepoUrl,
-//     issues, setIssues,
-//     selectedIssue, setSelectedIssue,
-//     setSummary
-//   } = useContext(AppContext);
-
-//   const [loading, setLoading] = useState(false);
-
-//   async function fetchRepo() {
-//     if (!repoUrl.trim()) return alert("Enter repository URL");
-
-//     setLoading(true);
-//     setIssues([]);
-//     setSelectedIssue(null);
-
-//     try {
-//       const res = await backend.processRepo({ url: repoUrl.trim(), model: selectedModel });
-
-//       const cleanIssues = res.data.issues || [];
-//       setIssues(cleanIssues);
-//       setSummary(res.data.summary || "");
-
-//     } catch (err) {
-//       alert("Error: " + err.message);
-//     }
-
-//     setLoading(false);
-//   }
-
-//   return (
-//     <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow">
-//       <h1 className="text-2xl font-semibold mb-4">Setup</h1>
-
-//       {/* Model */}
-//       <div className="mb-4">
-//         <label className="font-medium">Model</label>
-//         <select
-//           className="w-full border p-2 rounded"
-//           value={selectedModel}
-//           onChange={(e) => setSelectedModel(e.target.value)}
-//         >
-//           <option value="gemini">Gemini</option>
-//           <option value="groq">Groq</option>
-//         </select>
-//       </div>
-
-//       {/* Repo URL */}
-//       <div className="mb-4">
-//         <label className="font-medium">GitHub URL</label>
-//         <input
-//           className="w-full border p-2 rounded"
-//           value={repoUrl}
-//           onChange={(e) => setRepoUrl(e.target.value)}
-//           placeholder="https://github.com/user/repo"
-//         />
-//       </div>
-
-//       <button
-//         onClick={fetchRepo}
-//         className="w-full bg-blue-600 text-white p-2 rounded"
-//       >
-//         {loading ? "Processing..." : "Fetch Issues"}
-//       </button>
-
-//       {/* Issues */}
-//       {issues.length > 0 && (
-//         <div className="mt-6">
-//           <label className="font-medium">Select Issue</label>
-//           <select
-//             className="w-full border p-2 rounded"
-//             value={selectedIssue || ""}
-//             onChange={(e) => setSelectedIssue(parseInt(e.target.value))}
-//           >
-//             <option value="">Select Issue</option>
-//             {issues.map((i) => (
-//               <option key={i.id} value={i.id}>
-//                 #{i.id} {i.title}
-//               </option>
-//             ))}
-//           </select>
-
-//           <button
-//             onClick={() => selectedIssue ? onDone() : alert("Select issue")}
-//             className="w-full bg-green-600 mt-4 text-white p-2 rounded"
-//           >
-//             Continue
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-
 import { useContext, useState, useRef, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import backend from "../api/api";
@@ -255,7 +154,7 @@ export default function Dialog({ onDone }) {
 
   const modelOptions = [
     { value: "gemini", label: "Gemini 1.5 Pro" },
-    { value: "groq", label: "Groq (Llama 3)" }
+    { value: "groq", label: "ChatGPT-OSS" }
   ];
 
   const issueOptions = issues.map(i => ({

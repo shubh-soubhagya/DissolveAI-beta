@@ -14,11 +14,9 @@ ISSUES_CSV = r"data/repo_issues.csv"
 CUSTOM_MODEL_PATH = r"sentence-transformers/all-MiniLM-L6-v2"
 INDEX_PATH = r"embeddings/repo_index.pkl"
 
-# FILES_CSV = "repo_files_data.csv"
-# ISSUES_CSV = "repo_issues.csv"
-# CUSTOM_MODEL_PATH = "all-MiniLM-L6-v2"
+
 TOP_K = 30  # Number of most relevant files to retrieve per issue
-# ROW_INDEX = 3  # No longer needed, will be dynamic
+
 
 # LOAD ENVIRONMENT VARIABLES
 def load_env_and_configure():
@@ -58,7 +56,9 @@ def build_vector_index():
     print(f"📄 Total files: {len(df)}")
 
     model = SentenceTransformer(CUSTOM_MODEL_PATH)
-    embeddings = model.encode(df["file_content"].astype(str).tolist(), convert_to_numpy=True, show_progress_bar=True)
+    embeddings = model.encode(df["file_content"].astype(str).tolist(), 
+                              convert_to_numpy=True, 
+                              show_progress_bar=True)
 
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(embeddings)
@@ -68,6 +68,7 @@ def build_vector_index():
 
     print(f"✅ Vector index saved at: {INDEX_PATH}")
 
+TOP_K = 30  # Number of most relevant files to retrieve per issue
 
 # LOAD INDEX & RETRIEVE RELEVANT FILES
 def retrieve_relevant_files(query: str, top_k: int = TOP_K):

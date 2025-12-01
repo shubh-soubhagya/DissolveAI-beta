@@ -25,6 +25,8 @@ CHUNK_OVERLAP_TOKENS = 40
 EMBED_BATCH_SIZE = 64
 
 TOP_K = 5
+
+
 MAX_INPUT_TOKENS = 6000
 RESERVED_TOKENS = 400
 TOKEN_ENCODING = "gpt2"
@@ -291,6 +293,7 @@ def create_prompt(issue: dict, repo_context: str) -> Tuple[str, int]:
         "- Suggest exact code fixes.\n"
         "- Provide reasoning.\n"
         "- Keep formatting clean.\n"
+        "- Dont generate Tables"
     )
 
     enc = _get_tokenizer()

@@ -1,25 +1,3 @@
-// import { useContext } from "react";
-// import { AppContext } from "../context/AppContext";
-// import { FiMenu } from "react-icons/fi";
-
-// export default function Navbar() {
-//   const { setSidebarOpen } = useContext(AppContext);
-
-//   return (
-//     <nav className="bg-white shadow px-4 py-3 flex items-center justify-between">
-//       <h1 className="text-xl font-semibold">DissolveAI</h1>
-
-//       <button
-//         onClick={() => setSidebarOpen(true)}
-//         className="text-2xl p-2"
-//       >
-//         <FiMenu />
-//       </button>
-//     </nav>
-//   );
-// }
-
-
 import { useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { FiMenu, FiSettings, FiBell } from "react-icons/fi";
