@@ -1,4 +1,4 @@
-# 🤖 Desolve-mini – AI-Powered GitHub Issue Solver
+# 🤖 DissolveAI-beta – AI-Powered GitHub Issue Solver
 
 An AI assistant that analyzes GitHub repositories and helps solve issues using **Gemini** or **Groq** AI models with semantic search.
 
